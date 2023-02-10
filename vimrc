@@ -15,6 +15,7 @@ set packpath^=$XDG_DATA_HOME/vim,$XDG_CONFIG_HOME/vim
 set packpath+=$XDG_CONFIG_HOME/vim/after,$XDG_DATA_HOME/vim/after
 
 let g:netrw_home = $XDG_DATA_HOME."/vim"
+let $VIMHOME = g:netrw_home
 call mkdir($XDG_DATA_HOME."/vim/spell", 'p', 0700)
 
 set backupdir=$XDG_STATE_HOME/vim/backup | call mkdir(&backupdir, 'p', 0700)
@@ -32,17 +33,16 @@ set nocompatible           " Do not behave like vi
 filetype plugin indent on  " Load plugins according to detected filetype
 syntax enable              " Enable syntax highlighting
 
+" enable fzf in vim
+set rtp+=~/AppData/Local/msys64/clang64/bin/fzf
+
 " Numberline {{{
 set number                 " Display line number
 set relativenumber         " Display relative numbers
 "}}}
 
-"The following commands set <TAB> width to 4 spaces {{{
+" {{{
 set autoindent             " Indent according to previous line
-set expandtab              " Use spaces instead of tabs
-set tabstop     =4         " Actual width of tab character
-set softtabstop =4         " Tab key indents by 4 spaces
-set shiftwidth  =4         " >> indents by 4 spaces
 set shiftround             " >> indents to next multiple of 'shiftwidth'
 set mouse       =v         " Enable the mouse actions in all modes
 " }}}
@@ -56,32 +56,32 @@ set laststatus  =2         " Always show statusline
 " Visual rending of overflowing lines {{{
 set wrap
 set linebreak              " Wrap long lines
-set showbreak=⏎⏎\ \        " How to render the continued line
 set display     =lastline  " Show as much as possible of the last line
-set columns     =75        " visually wrap text at 80 character 
 set formatoptions+=wjp     " Wrap lines at whitespaces do not wrap after period
 set breakindent            " Respect indentation when folding
 set showmode               " Show current mode in command-line
 set showcmd                " Show already typed keys when more are expected
+if !has('ide')
+    " This breaks in intellij
+    " set showbreak=⏎⏎\ \        " How to render the continued line
+endif
 " }}}
 
 " Search options {{{
 set incsearch              " Highlight while searching with / or ?
-set hlsearch               " Keep matches highlighted
-set ignorecase             "Ignore case when searching
+set hlsearch               " Highlight all matches
+set ignorecase             " Ignore case when searching
+set synmaxcol   =200       " Only highlight the first 200 columns
 "}}}
 
 
 " {{{
 set splitbelow             " Open new windows below the current window
 set splitright             " Open new windows right of the current window
-" }}}
 
-" {{{
 set cursorline             " Find the current line quickly
 set wrapscan               " Searches wrap around end-of-file
 set report      =0         " Always report changed lines
-set synmaxcol   =200       " Only highlight the first 200 columns
 " }}}
 
 " {{{
@@ -98,14 +98,14 @@ endif
 " Put all temporary files under the same directory
 " https://github.com/mhinz/vim-galore#temporary-files
 "set backup
-"set backupdir   =$HOME/.vim/files/backup/
+"set backupdir   =$VIMHOME/files/backup/
 "set backupext   =-vimbackup
 "set backupskip  =
-"set directory   =$HOME/.vim/files/swap//
+"set directory   =$VIMHOME/files/swap//
 "set updatecount =100
 "set undofile
-"set undodir     =$HOME/.vim/files/undo/
-"set viminfo     ='100,n$HOME/.vim/files/info/viminfo
+"set undodir     =$VIMHOME/files/undo/
+"set viminfo     ='100,n$VIMHOME/files/info/viminfo
 set noswapfile           "Deactivate swapfile
 " }}}
 
@@ -118,10 +118,10 @@ augroup highlight_whitespace:
 augroup END
 " }}}
 
-" Spell checking activated globally {{{
+" Spell checking activated for text files {{{
 augroup check_spelling:
     autocmd!
-    autocmd BufNewFile,BufRead *.md,*.txt,*rc :set spell spelllang=en_us
+    autocmd BufNewFile,BufRead *.md,*.txt,*.tex :set spell spelllang=en_us
 augroup END
 " }}}
 
@@ -132,8 +132,63 @@ augroup filetype_vim
 augroup END
 " }}}
 
+"""""""""""""""""" LEADER KEYBINDINGS
+"  {{{
+" map leader to Space
+let mapleader = " "
+" Set localleader to //
+let maplocalleader = "//"
+" }}}
 
-""""""""" VIM PLUG
+"""""""""""""""" REMAPPINGS
+" {{{
+noremap <leader>ev :vsplit $MYVIMRC<CR>
+noremap <leader>j :bn<CR>
+noremap <leader>k :bp<CR>
+noremap <leader>s :source %<CR>
+noremap <leader>w <C-W>w
+noremap <leader>; mqA;<ESC>`q
+
+" Swap colon and semicolon for faster command execution
+noremap : ;
+noremap ; :
+" Swap British pound with hastag
+inoremap £ #
+" Toggle off highlight of previous search
+nnoremap <silent> <leader><space> :noh<cr><esc>
+" Keep visual selection after indenting
+vnoremap < <gv
+vnoremap > >gv
+
+" }}}
+
+
+"""""""""""""""""" AIRLINE
+" {{{
+set ttyfast                " Faster redrawing
+set t_Co=256                " Set colors to 256
+set t_ut=
+" THEMES
+" colorscheme vscode-dark       " Set the color theme to match vscode
+let g:airline_theme = 'nightfly'
+set enc=utf-8
+" set guifont=Powerline_Consolas:h11
+" set renderoptions=type:directx,gamma:1.5,contrast:0.5,geom:1,renmode:5,taamode:1,level:0.5
+" }}}
+
+
+"""""""""""""""""" ABBREVIATIONS
+"{{{
+iabbrev @@ ninocangialosi@yahoo.it
+iabbrev myssign Antonino Cangialosi
+"}}}
+
+
+""""""""" PLUGINS
+" Let's use the plugins defined here only with vim
+if has('nvim')
+    finish
+endif
 
 " Automatic installation: install vim-plug if not found {{{
 let data_dir = has('nvim') ? stdpath('data') . '/site' : g:netrw_home
@@ -155,8 +210,23 @@ call plug#begin(g:netrw_home.'/bundle')
     " Register vim-plug itself for :help support
     Plug 'junegunn/vim-plug'
 
+    " Adhere to tpope standards
+    Plug 'tpope/vim-sensible'
+
+    " make surronding things easier
+    Plug 'tpope/vim-surround'
+
+    " match parentheses
+    Plug 'chrisbra/matchit'
+
+    " define motions for the full buffer
+    Plug 'kana/vim-textobj-entire'
+
     " comment line(s) with gcc/gc<motion>
     Plug 'tpope/vim-commentary'
+
+    " automatic adjustment of tabwidth on filetype
+    Plug 'tpope/vim-sleuth'
 
     " git commands in vim and diff in files
     Plug 'tpope/vim-fugitive'
@@ -169,7 +239,7 @@ call plug#begin(g:netrw_home.'/bundle')
     Plug 'lstwn/broot'
 
     " folding for Python
-    "Plug 'tmhedberg/SimpylFold'
+    Plug 'tmhedberg/SimpylFold'
 
     " fzf
     Plug 'junegunn/fzf.vim'
@@ -177,7 +247,7 @@ call plug#begin(g:netrw_home.'/bundle')
     " display and search LSP symbols and thumbnails
     Plug 'liuchengxu/vista.vim'
 
-    " auto-indenting
+    " auto-indenting for Python
     Plug 'vimjas/vim-python-pep8-indent'
 
     " Asynchronous Linting Engine & vim-lsp
@@ -200,66 +270,13 @@ call plug#begin(g:netrw_home.'/bundle')
     " search and autocomplete unicode characters
     Plug 'chrisbra/unicode.vim'
 
+    " highlight colors for log files
+    Plug 'mtdl9/vim-log-highlighting'
+
+    " wakatime plugin
+    Plug 'wakatime/vim-wakatime'
+
+    " add surronding 's' movement to vim
+    Plug 'tpope/vim-surround'
 call plug#end()
-"}}}
-
-
-""""""""" PYTHON SUPPORT
-
-"python virtualenv support {{{
-py3 << EOF
-import os
-import sys
-if 'VIRTUAL_ENV' in os.environ:
-    project_base_dir = os.environ['VIRTUAL_ENV']
-    activate_this = os.path.join(project_base_dir, 'bin/activate_this.py')
-    exec(
-        compile(
-            open(activate_this, "rb").read(),
-            activate_this, 'exec'),
-            dict(__file__=activate_this)
-    )
-EOF
-" }}}
-
-
-"""""""""""""""""" LEADER KEYBINDINGS
-"  {{{
-let mapleader = " "             " map leader to Space
-noremap <leader>ev :vsplit $MYVIMRC<CR>
-noremap <leader>j :bn<CR>
-noremap <leader>k :bp<CR>
-noremap <leader>s :source %<CR>
-noremap <leader>w <C-W>w
-noremap <leader>; mqA;<ESC>`q
-let maplocalleader = "//"       " Set localleader to //
-" Ctrl-u capitalize current words
-inoremap <c-u> <esc>viwUi
-nnoremap <c-u> viwU
-" Swap colon and semicolon for faster command execution
-noremap : ;
-noremap ; :
-" Toggle off highlight of previous search
-nnoremap <silent> <leader><esc> :noh<cr><esc>
-" }}}
-
-
-"""""""""""""""""" AIRLINE
-" {{{
-set ttyfast                " Faster redrawing
-set t_Co=256                " Set colors to 256
-set t_ut=
-" THEMES
-" colorscheme nightfox       " Set the color theme to match vscode
-let g:airline_theme = 'nightfly'
-set enc=utf-8
-set guifont=Powerline_Consolas:h11
-set renderoptions=type:directx,gamma:1.5,contrast:0.5,geom:1,renmode:5,taamode:1,level:0.5
-" }}}
-
-
-"""""""""""""""""" ABBREVIATIONS
-"{{{
-iabbrev @@ ninocangialosi@yahoo.it
-iabbrev myssign Antonino Cangialosi
 "}}}

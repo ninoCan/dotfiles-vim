@@ -2518,7 +2518,7 @@ endfunction
 
 function! s:upgrade_specs()
   for spec in values(g:plugs)
-    let spec.frozen = get(spec, 'frozen', 0)
+[O    let spec.frozen = get(spec, 'frozen', 0)
   endfor
 endfunction
 
@@ -2810,3 +2810,4 @@ endif
 
 let &cpo = s:cpo_save
 unlet s:cpo_save
+
